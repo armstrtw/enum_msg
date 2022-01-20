@@ -42,18 +42,22 @@ fn encode(msg: &Fixmsg) -> String {
         Fixmsg::CheckSum(i) => [msg_code(&msg).to_string(), i.to_string()].join("="),
     }
 }
-fn serialize_msg(seqnum: &mut u64, mut msg_vec: Vec<Fixmsg>) -> String {
+fn serialize_msg(seqnum: &mut u64, mut msg_vec: Vec<Fixmsg>) -> Result<String, &'static str> {
     let seqnum_this_msg = *seqnum;
-    *seqnum += 1;
-    msg_vec.push(Fixmsg::MsgSeqNum(seqnum_this_msg));
-    msg_vec.push(Fixmsg::SendingTime(Utc::now()));
-    let msg_len: u32 = (msg_vec.len() * 10).try_into().unwrap();
-    msg_vec.push(Fixmsg::BodyLength(msg_len));
-    msg_vec
-        .iter()
-        .map(|msg: &Fixmsg| encode(msg))
-        .collect::<Vec<_>>()
-        .join("|")
+    if seqnum_this_msg == u64::MAX {
+        Err("Encountered u64::MAX. Reset sequence.")
+    } else {
+        *seqnum += 1;
+        msg_vec.push(Fixmsg::MsgSeqNum(seqnum_this_msg));
+        msg_vec.push(Fixmsg::SendingTime(Utc::now()));
+        let msg_len: u32 = (msg_vec.len() * 10).try_into().unwrap();
+        msg_vec.push(Fixmsg::BodyLength(msg_len));
+        Ok(msg_vec
+            .iter()
+            .map(|msg: &Fixmsg| encode(msg))
+            .collect::<Vec<_>>()
+            .join("|"))
+    }
 }
 
 fn main() {
@@ -97,7 +101,12 @@ fn main() {
         Fixmsg::TargetCompID(tcid.to_string()),
         Fixmsg::TargetSubID(tsid.to_string()),
     ];
-    println!("msg1:\n{}", serialize_msg(&mut seqnum, msg1));
-    println!("msg2:\n{}", serialize_msg(&mut seqnum, msg2));
-    println!("msg3:\n{}", serialize_msg(&mut seqnum, msg3));
+    println!("msg1:\n{}", serialize_msg(&mut seqnum, msg1).unwrap());
+    println!("msg2:\n{}", serialize_msg(&mut seqnum, msg2).unwrap());
+    println!("intentional captured panic:");
+    seqnum = u64::MAX;
+    match serialize_msg(&mut seqnum, msg3) {
+        Ok(msg_str) => println!("{}", msg_str),
+        Err(e) => println!("{}", e),
+    }
 }
