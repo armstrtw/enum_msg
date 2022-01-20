@@ -42,11 +42,26 @@ fn encode(msg: &Fixmsg) -> String {
         Fixmsg::CheckSum(i) => [msg_code(&msg).to_string(), i.to_string()].join("="),
     }
 }
+fn serialize_msg(seqnum: &mut u64, mut msg_vec: Vec<Fixmsg>) -> String {
+    let seqnum_this_msg = *seqnum;
+    *seqnum += 1;
+    msg_vec.push(Fixmsg::MsgSeqNum(seqnum_this_msg));
+    msg_vec.push(Fixmsg::SendingTime(Utc::now()));
+    let msg_len: u32 = (msg_vec.len() * 10).try_into().unwrap();
+    msg_vec.push(Fixmsg::BodyLength(msg_len));
+    msg_vec
+        .iter()
+        .map(|msg: &Fixmsg| encode(msg))
+        .collect::<Vec<_>>()
+        .join("|")
+}
 
 fn main() {
     let fix_proto_string = "FIXT.1.1";
     let scid = "ArmstrongTrading";
+    let ssid = "GlobalMacro";
     let tcid = "MorganStanley";
+    let tsid = "FixedIncomeDesk";
     let mut seqnum: u64 = 0;
 
     let begin_msg = Fixmsg::BeginString(fix_proto_string.to_string());
@@ -56,21 +71,33 @@ fn main() {
     println!("example msgpart: {}", encode(&check_msg));
     println!("example msgpart: {}", encode(&time_msg));
 
-    let message_vec = vec![
+    let msg1 = vec![
         Fixmsg::BeginString(fix_proto_string.to_string()),
-        Fixmsg::MsgType('A'),
+        Fixmsg::MsgType('A'), // Logon
         Fixmsg::SenderCompID(scid.to_string()),
+        Fixmsg::SenderSubID(ssid.to_string()),
         Fixmsg::TargetCompID(tcid.to_string()),
-        Fixmsg::MsgSeqNum(seqnum),
-        Fixmsg::BodyLength(108),
-        Fixmsg::SendingTime(Utc::now()),
+        Fixmsg::TargetSubID(tsid.to_string()),
     ];
-    seqnum += 1;
-    let msg_string = message_vec
-        .iter()
-        .map(|msg: &Fixmsg| encode(msg))
-        .collect::<Vec<_>>()
-        .join("|");
 
-    println!("final msg:\n{}", msg_string);
+    let msg2 = vec![
+        Fixmsg::BeginString(fix_proto_string.to_string()),
+        Fixmsg::MsgType('1'), // Test
+        Fixmsg::SenderCompID(scid.to_string()),
+        Fixmsg::SenderSubID(ssid.to_string()),
+        Fixmsg::TargetCompID(tcid.to_string()),
+        Fixmsg::TargetSubID(tsid.to_string()),
+    ];
+
+    let msg3 = vec![
+        Fixmsg::BeginString(fix_proto_string.to_string()),
+        Fixmsg::MsgType('5'), // Logout
+        Fixmsg::SenderCompID(scid.to_string()),
+        Fixmsg::SenderSubID(ssid.to_string()),
+        Fixmsg::TargetCompID(tcid.to_string()),
+        Fixmsg::TargetSubID(tsid.to_string()),
+    ];
+    println!("msg1:\n{}", serialize_msg(&mut seqnum, msg1));
+    println!("msg2:\n{}", serialize_msg(&mut seqnum, msg2));
+    println!("msg3:\n{}", serialize_msg(&mut seqnum, msg3));
 }
