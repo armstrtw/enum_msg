@@ -28,26 +28,26 @@ fn msg_code(msg: Fixmsg) -> i32 {
     }
 }
 
-fn encode(msg: Fixmsg) {
+fn encode(msg: Fixmsg) -> String {
     match msg {
-        Fixmsg::BeginString => println!("8="),
-        Fixmsg::BodyLength => println!("9="),
-        Fixmsg::MsgType => println!("35="),
-        Fixmsg::SenderCompID => println!("49="),
-        Fixmsg::TargetCompID => println!("56="),
-        Fixmsg::TargetSubID => println!("57="),
-        Fixmsg::SenderSubID => println!("50="),
-        Fixmsg::MsgSeqNum => println!("34="),
-        Fixmsg::SendingTime(tm) => println!("52={}", tm.to_string()),
-        //Fixmsg::CheckSum(i) => println!("10={}", i.to_string()),
-        Fixmsg::CheckSum(i) => println!("{}={}", msg_code(msg).to_string(), i.to_string()),
-    };
+        Fixmsg::BeginString => msg_code(msg).to_string(),
+        Fixmsg::BodyLength => msg_code(msg).to_string(),
+        Fixmsg::MsgType => msg_code(msg).to_string(),
+        Fixmsg::SenderCompID => msg_code(msg).to_string(),
+        Fixmsg::TargetCompID => msg_code(msg).to_string(),
+        Fixmsg::TargetSubID => msg_code(msg).to_string(),
+        Fixmsg::SenderSubID => msg_code(msg).to_string(),
+        Fixmsg::MsgSeqNum => msg_code(msg).to_string(),
+        Fixmsg::SendingTime(tm) => [msg_code(msg).to_string(), tm.to_string()].join("="),
+        Fixmsg::CheckSum(i) => [msg_code(msg).to_string(), i.to_string()].join("="),
+    }
 }
 
 fn main() {
+    let begin_msg = Fixmsg::BeginString;
     let check_msg = Fixmsg::CheckSum(32);
     let time_msg = Fixmsg::SendingTime(Utc::now());
-    //println!("msg: {}", encode(check_msg));
-    encode(check_msg);
-    encode(time_msg);
+    println!("msg: {}", encode(begin_msg));
+    println!("msg: {}", encode(check_msg));
+    println!("msg: {}", encode(time_msg));
 }
